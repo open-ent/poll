@@ -2,16 +2,10 @@ name: Build & Publish Fat Mod
 
 on:
   push:
-    branches:
-      - main
-      - master
-      - develop
-      - dev
-      - '*-patched'
-      - '*-patched-dev'
+    branches: [main, master, develop, '*-patched', '*-patched-dev']
     tags: ['*']
   pull_request:
-    branches: [main, master, develop, dev]
+    branches: [main, master, develop]
   workflow_dispatch:
     inputs:
       entcore_version:
@@ -29,6 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Build with Node 10 via Docker
         run: |
           docker run --rm \
@@ -37,6 +32,7 @@ jobs:
             --user root \
             opendigitaleducation/node:10-alpine \
             sh -c "npm install --legacy-peer-deps && node_modules/gulp/bin/gulp.js build"
+
       - name: Upload frontend assets
         uses: actions/upload-artifact@v4
         with:
@@ -50,12 +46,20 @@ jobs:
     needs: frontend
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           java-version: '8'
           distribution: temurin
           cache: maven
-      - name: Configure Maven pour GitHub Packages
+
+      - name: Download frontend assets
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-assets
+          path: src/main/resources/
+
+      - name: Configure Maven
         run: |
           mkdir -p ~/.m2
           cat > ~/.m2/settings.xml << EOF
@@ -89,21 +93,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
-      - name: Download frontend assets
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-assets
-          path: src/main/resources/
+
       - name: Build fat JAR
         run: |
           ENTCORE_OPT=""
           if [ -n "$ENTCORE_VERSION" ]; then ENTCORE_OPT="-DentCoreVersion=$ENTCORE_VERSION"; fi
-          mvn clean package -DskipTests -B $ENTCORE_OPT
+          mvn clean package -DskipTests -B -DbuildNumber=${GITHUB_SHA::8} -DscmBranch=${GITHUB_REF_NAME} $ENTCORE_OPT
         env:
           ENTCORE_VERSION: ${{ github.event.inputs.entcore_version }}
+
       - name: Run tests
         if: github.event_name == 'pull_request'
         run: mvn test -B
+
       - name: Configure Maven for GitHub Packages
         if: startsWith(github.ref, 'refs/tags/')
         run: |
@@ -122,7 +124,9 @@ jobs:
             </servers>
           </settings>
           EOF
+
       - name: Publish fat JAR to GitHub Packages
+        continue-on-error: true
         if: startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -131,7 +135,12 @@ jobs:
           ARTIFACT_ID=$(mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout)
           VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
           FAT_JAR=$(ls target/*-fat.jar 2>/dev/null | head -1)
-          if [ -z "${FAT_JAR}" ]; then echo "::error::Fat JAR not found"; exit 1; fi
+          echo "Publishing ${GROUP_ID}:${ARTIFACT_ID}:${VERSION}:fat"
+          if [ -z "${FAT_JAR}" ]; then
+            echo "::error::Fat JAR not found at ${FAT_JAR}"
+            ls -la target/*.jar 2>/dev/null || echo "No JARs found in target/"
+            exit 1
+          fi
           mvn deploy:deploy-file \
             -Dfile="${FAT_JAR}" \
             -DgroupId="${GROUP_ID}" \
@@ -142,6 +151,26 @@ jobs:
             -DrepositoryId=github \
             -Durl="https://maven.pkg.github.com/${{ github.repository }}" \
             -B
+
+      - name: Publish fat JAR to rct-nexus
+        continue-on-error: true
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          NEXUS_USER: ${{ secrets.NEXUS_USER }}
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+        run: |
+          cat > /tmp/nx-settings.xml <<EOF
+          <settings><servers><server><id>pt-releases</id><username>${NEXUS_USER}</username><password>${NEXUS_PASSWORD}</password></server></servers></settings>
+          EOF
+          FAT_JAR=$(ls target/*-fat.jar 2>/dev/null | head -1)
+          if [ -z "${FAT_JAR}" ]; then echo "::error::Fat JAR not found"; exit 1; fi
+          FAT_ABS=$(realpath "${FAT_JAR}")
+          BASE=$(basename "${FAT_JAR}" -fat.jar)
+          GROUP_ID=${BASE%%~*}; REST=${BASE#*~}; ARTIFACT_ID=${REST%%~*}; VERSION=${REST#*~}
+          echo "Deploying ${GROUP_ID}:${ARTIFACT_ID}:${VERSION}:fat -> rct-nexus"
+          cd /tmp
+          mvn deploy:deploy-file -s /tmp/nx-settings.xml -Dfile="${FAT_ABS}" -DgroupId="${GROUP_ID}" -DartifactId="${ARTIFACT_ID}" -Dversion="${VERSION}" -Dclassifier=fat -Dpackaging=jar -DrepositoryId=pt-releases -Durl="https://rct-nexus.tech.fr/repository/maven-releases/" -B
+
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
