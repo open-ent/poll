@@ -50,17 +50,30 @@ clean () {
 buildNode () {
   #jenkins
   echo "[buildNode] Get branch name from jenkins env..."
+
+  # ENTCORE_EXPLICIT=true seulement si une version d'entcore a été EXPLICITEMENT demandée
+  # (FRONT_TAG, ex. Jenkins) — voir plus bas : dans ce seul cas BRANCH_NAME désigne un tag
+  # npm entcore réel à installer. Sans ça, BRANCH_NAME retombe sur la branche git LOCALE DU
+  # MODULE (ex. "2.1.4-patched-dev") qui n'a jamais été un tag entcore publié → `npm install
+  # entcore@2.1.4-patched-dev` échoue toujours (ETARGET). Même fix que exercizer (d9d671b6).
+  ENTCORE_EXPLICIT=false
+
   BRANCH_NAME=`echo $GIT_BRANCH | sed -e "s|origin/||g"`
   if [ "$BRANCH_NAME" = "" ]; then
     echo "[buildNode] Get branch name from git..."
     BRANCH_NAME=`git branch | sed -n -e "s/^\* \(.*\)/\1/p"`
+  fi
+  if [ ! -z "$FRONT_TAG" ]; then
+    echo "[buildNode] Get tag name from jenkins param... $FRONT_TAG"
+    BRANCH_NAME="$FRONT_TAG"
+    ENTCORE_EXPLICIT=true
   fi
   if [ "$BRANCH_NAME" = "" ]; then
     echo "[buildNode] Branch name should not be empty!"
     exit -1
   fi
 
-  if [ "$BRANCH_NAME" = 'master' ]; then
+  if [ "$ENTCORE_EXPLICIT" = false ] || [ "$BRANCH_NAME" = 'master' ]; then
       echo "[buildNode] Use entcore version from package.json ($BRANCH_NAME)"
       case `uname -s` in
         MINGW*)
