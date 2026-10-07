@@ -1,1 +1,6 @@
-{}
+{
+  "poll": "Poll",
+  "poll.notification.shared": "Poll: A poll has been shared with you",
+  "poll.share": "Sharing of a poll",
+  "timeline.poll.has.shared": "shared the poll with you"
+}
