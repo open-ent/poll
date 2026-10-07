@@ -35,7 +35,7 @@
 
     <properties>
         <entcore.version>6.16.14-patched</entcore.version>
-        <entCoreLibsVersion>6.16.7-patched</entCoreLibsVersion>
+        <entCoreLibsVersion>6.16.8-patched</entCoreLibsVersion>
         <vertx-cron-timer.version>3.0.0</vertx-cron-timer.version>
     </properties>
 
