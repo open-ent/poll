@@ -91,10 +91,15 @@ describe("sondages", () => {
       answers: [{ value: "A", votes: ["me"] }, { value: "B" }],
     });
     const over = poll({ _id: "over", end: "2026-11-01T00:00:00Z" });
-    const s = sortPolls([mine, open, voted, over], "me", NOW);
+    const mineOver = poll({
+      _id: "mineOver",
+      end: "2026-11-01T00:00:00Z",
+      owner: { userId: "me", displayName: "Moi" },
+    });
+    const s = sortPolls([mine, mineOver, open, voted, over], "me", NOW);
     expect(s.submitted.map((p) => p._id)).toEqual(["mine"]);
     expect(s.unanswered.map((p) => p._id)).toEqual(["open"]);
-    expect(s.finished.map((p) => p._id)).toEqual(["voted", "over"]);
+    expect(s.finished.map((p) => p._id)).toEqual(["mineOver", "voted", "over"]);
   });
 
   it("valide la question et au moins deux réponses", () => {

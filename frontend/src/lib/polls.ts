@@ -65,8 +65,9 @@ export const sortPolls = (
   const out: Sorted = { unanswered: [], submitted: [], finished: [] };
   polls.forEach((p) => {
     const mine = p.owner?.userId === userId;
-    if (mine) out.submitted.push(p);
-    else if (hasExpired(p, now) || hasAlreadyVoted(p, userId))
+    // un sondage terminé, même lancé par moi, passe dans « terminés »
+    if (mine && !hasExpired(p, now)) out.submitted.push(p);
+    else if (mine || hasExpired(p, now) || hasAlreadyVoted(p, userId))
       out.finished.push(p);
     else out.unanswered.push(p);
   });
