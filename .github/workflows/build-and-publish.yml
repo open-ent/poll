@@ -41,6 +41,37 @@ jobs:
             opendigitaleducation/node:10-alpine \
             sh -c "npm install --legacy-peer-deps && node_modules/gulp/bin/gulp.js build"
 
+      # IHM React de la vue poll-react.html (/poll/public/react/poll.js) : sous-projet Vite frontend/,
+      # distinct du Gulp. Paquets privés @open-ent -> auth via OPENENT_PACKAGES_TOKEN (frontend/.npmrc).
+      # Sans cette étape, le fat-mod ne contient pas le bundle et ?ui=react (défaut) est cassé (404).
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - name: Build frontend React (sous-projet Vite frontend/)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.OPENENT_PACKAGES_TOKEN }}
+        run: |
+          # le Gulp (docker, root) a créé des fichiers root dans src/main/resources
+          sudo chown -R "$(id -u):$(id -g)" src/main/resources
+          cd frontend
+          pnpm install --no-frozen-lockfile
+          pnpm exec vitest run
+          NODE_ENV=production pnpm exec vite build
+          mkdir -p ../src/main/resources/public/react
+          cp dist/poll.js ../src/main/resources/public/react/
+          [ -d dist/assets ] && cp -r dist/assets ../src/main/resources/public/react/ || true
+
+      - name: Verify build outputs
+        run: |
+          test -f src/main/resources/view/poll.html       || { echo "::error::view/poll.html missing"; exit 1; }
+          test -f src/main/resources/view/poll-react.html || { echo "::error::view/poll-react.html missing"; exit 1; }
+          test -f src/main/resources/public/react/poll.js || { echo "::error::public/react/poll.js missing"; exit 1; }
+
       - name: Upload frontend assets
         uses: actions/upload-artifact@v7
         with:
