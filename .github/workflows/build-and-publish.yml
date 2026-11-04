@@ -32,13 +32,13 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Build with Node 10 via Docker
+      - name: Build with Node 26 via Docker
         run: |
           docker run --rm \
             -v "${{ github.workspace }}:/workspace" \
             -w /workspace \
             --user root \
-            opendigitaleducation/node:10-alpine \
+            node:26-alpine \
             sh -c "npm install --legacy-peer-deps && node_modules/gulp/bin/gulp.js build"
 
       # IHM React de la vue poll-react.html (/poll/public/react/poll.js) : sous-projet Vite frontend/,
@@ -46,7 +46,7 @@ jobs:
       # Sans cette étape, le fat-mod ne contient pas le bundle et ?ui=react (défaut) est cassé (404).
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 26
 
       - uses: pnpm/action-setup@v6
         with:
@@ -88,7 +88,7 @@ jobs:
 
       - uses: actions/setup-java@v6
         with:
-          java-version: '21'
+          java-version: '25'
           distribution: temurin
           cache: maven
 
@@ -161,10 +161,20 @@ jobs:
         env:
           ENTCORE_VERSION: ${{ github.event.inputs.entcore_version }}
 
+      # Depuis le JDK 23, javac n'exécute plus les processeurs d'annotations trouvés sur le
+      # classpath : sans `-proc:full` (pom), le jar part sans securedaction/ ni routes/, et
+      # chaque route sécurisée répond 404 — sans aucune erreur de build.
+      - name: Verify annotation metadata
+        run: |
+          FAT_JAR=$(ls target/*-fat.jar | head -1)
+          for d in securedaction routes; do
+            unzip -Z1 "$FAT_JAR" | grep -q "^$d/" || { echo "::error::$d/ absent de $FAT_JAR"; exit 1; }
+          done
+
       - name: Run tests
         if: github.event_name == 'pull_request'
         # profil `scala` d'app-parent désactivé : maven-scala-plugin 2.15.2 ne lit pas le
-        # bytecode du JDK 21, et aucun module applicatif n'a de source Scala.
+        # bytecode des JDK récents, et aucun module applicatif n'a de source Scala.
         run: mvn test -B -P '!scala'
 
       - name: Configure Maven for GitHub Packages
