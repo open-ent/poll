@@ -2,7 +2,7 @@
   "name": "@open-ent/poll-frontend",
   "version": "1.0.0",
   "private": true,
-  "description": "Frontend React du module Sondage — migration AngularJS -> React, cohabite avec l'IHM AngularJS (?ui=react|angular)",
+  "description": "Frontend React du module Sondage (seule interface servie)",
   "license": "AGPL-3.0",
   "type": "module",
   "scripts": {
