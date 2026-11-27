@@ -24,7 +24,11 @@ export default defineConfig({
       "@open-ent/bootstrap",
       "@open-ent/utilities",
     ],
-    alias: { "~": resolve(__dirname, "src") },
+    alias: {
+      "~": resolve(__dirname, "src"),
+      // Illustrations du socle (écrans vides), comme dans blog et l'agenda.
+      "@images": resolve(__dirname, "node_modules/@open-ent/bootstrap/dist/images"),
+    },
   },
   build: {
     outDir: "dist",

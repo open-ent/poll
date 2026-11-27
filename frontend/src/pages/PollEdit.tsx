@@ -1,8 +1,16 @@
-import { Button } from "@open-ent/react";
+import { Alert, Button, IconButton } from "@open-ent/react";
+import {
+  IconArrowDown,
+  IconArrowLeft,
+  IconArrowUp,
+  IconDelete,
+  IconPlus,
+} from "@open-ent/react/icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { PollThumb } from "../components/PollThumb";
 import {
   Answer,
   defaultEnd,
@@ -65,40 +73,59 @@ export const PollEdit = () => {
       if (existing?._id) await pollService.update(existing._id, body);
       else await pollService.create(body);
       await qc.invalidateQueries({ queryKey: ["polls"] });
-      navigate("/");
+      navigate(existing?._id ? `/view/${existing._id}` : "/");
     } catch {
       setError(
-        t("poll.error.save", { defaultValue: "L'enregistrement a échoué." }),
+        t("poll.error.save", {
+          defaultValue: "Le sondage n'a pas pu être enregistré. Réessayez.",
+        }),
       );
     } finally {
       setBusy(false);
     }
   };
 
+  const cancel = () => navigate(existing?._id ? `/view/${existing._id}` : "/");
+
   return (
-    <form onSubmit={submit} data-poll-form>
-      <h2 className="h3">
-        {existing ? t("poll.head.modify") : t("poll.head.create")}
+    <form onSubmit={submit} className="poll-edit py-16" data-poll-form>
+      <Link
+        to={existing?._id ? `/view/${existing._id}` : "/"}
+        className="poll-back"
+      >
+        <IconArrowLeft width={16} height={16} aria-hidden="true" />
+        {existing
+          ? t("poll.back.view", { defaultValue: "Retour au sondage" })
+          : t("poll.back", { defaultValue: "Tous les sondages" })}
+      </Link>
+      <h2 className="h3 mt-16 mb-24">
+        {existing
+          ? t("poll.edit.title", { defaultValue: "Modifier le sondage" })
+          : t("poll.new.title", { defaultValue: "Nouveau sondage" })}
       </h2>
 
-      <div className="mb-16">
-        <label className="d-block fw-bold">{t("poll.image")}</label>
-        <div className="d-flex align-items-center gap-12">
-          {icon && (
-            <img
-              src={`${icon}?thumbnail=120x120`}
-              alt=""
-              width={64}
-              height={64}
-              style={{ objectFit: "cover", borderRadius: 6 }}
-            />
-          )}
-          <label className="btn btn-outline-primary mb-0" data-poll-icon-change>
-            {t("poll.select", { defaultValue: "Choisir" })}
+      {locked && (
+        <div className="mb-24" data-poll-locked>
+          <Alert type="info">
+            {t("poll.locked", {
+              defaultValue:
+                "Ce sondage a déjà reçu des votes : la question et les réponses ne peuvent plus changer. Vous pouvez encore modifier l'image et la date de clôture.",
+            })}
+          </Alert>
+        </div>
+      )}
+
+      <div className="poll-edit-head mb-24">
+        <div className="d-flex flex-column align-items-center gap-8">
+          <PollThumb icon={icon} size={96} />
+          <label className="poll-link-button mb-0" data-poll-icon-change>
+            {icon
+              ? t("poll.image.change", { defaultValue: "Changer l'image" })
+              : t("poll.image.choose", { defaultValue: "Ajouter une image" })}
             <input
               type="file"
               accept="image/*"
-              hidden
+              className="visually-hidden"
               data-poll-icon-input
               onChange={async (e) => {
                 const file = e.target.files?.[0];
@@ -109,7 +136,8 @@ export const PollEdit = () => {
                 } catch {
                   setError(
                     t("poll.error.image", {
-                      defaultValue: "L'image n'a pas pu être envoyée.",
+                      defaultValue:
+                        "L'image n'a pas pu être envoyée. Essayez un fichier JPEG ou PNG plus léger.",
                     }),
                   );
                 }
@@ -117,126 +145,169 @@ export const PollEdit = () => {
             />
           </label>
           {icon && (
-            <Button
+            <button
               type="button"
-              color="tertiary"
-              variant="ghost"
+              className="poll-link-button text-gray-700"
               onClick={() => setIcon(undefined)}
               data-poll-icon-remove
             >
               {t("poll.icon.remove", { defaultValue: "Retirer l'image" })}
-            </Button>
+            </button>
           )}
+        </div>
+
+        <div className="d-flex flex-column gap-16" style={{ minWidth: 0 }}>
+          <div>
+            <label htmlFor="poll-question" className="form-label">
+              {t("poll.question")}
+            </label>
+            <input
+              id="poll-question"
+              className="form-control form-control-lg"
+              value={question}
+              disabled={locked}
+              onChange={(e) => setQuestion(e.target.value)}
+              placeholder={t("poll.question.placeholder", {
+                defaultValue: "Par exemple : quel jour pour la sortie au musée ?",
+              })}
+              required
+              data-poll-question
+            />
+          </div>
+          <div>
+            <label htmlFor="poll-end" className="form-label">
+              {t("poll.end")}
+            </label>
+            <input
+              id="poll-end"
+              className="form-control poll-date"
+              type="date"
+              value={end}
+              onChange={(e) => setEnd(e.target.value)}
+              aria-describedby="poll-end-help"
+              required
+              data-poll-end
+            />
+            <small id="poll-end-help" className="d-block text-gray-700 mt-4">
+              {t("poll.end.help", {
+                defaultValue: "Les votes restent ouverts jusqu'au soir de cette date.",
+              })}
+            </small>
+          </div>
         </div>
       </div>
 
-      <label className="d-block mb-16">
-        <span className="fw-bold">{t("poll.question")}</span>
-        <input
-          className="form-control"
-          value={question}
-          disabled={locked}
-          onChange={(e) => setQuestion(e.target.value)}
-          required
-          data-poll-question
-        />
-      </label>
-
-      <label className="d-block mb-16">
-        <span className="fw-bold">{t("poll.end")}</span>
-        <input
-          className="form-control"
-          style={{ maxWidth: 220 }}
-          type="date"
-          value={end}
-          onChange={(e) => setEnd(e.target.value)}
-          required
-          data-poll-end
-        />
-      </label>
-
-      <fieldset className="mb-16">
-        <legend className="h6 fw-bold">{t("poll.answers")}</legend>
-        {answers.map((a, i) => (
-          <div
-            key={i}
-            className="d-flex gap-8 mb-8 align-items-center"
-            data-poll-answer={i}
-          >
-            <input
-              className="form-control"
-              value={a.value ?? ""}
-              maxLength={MAX_ANSWER}
-              disabled={locked}
-              aria-label={`${t("poll.answers")} ${i + 1}`}
-              onChange={(e) =>
-                setAnswers(
-                  answers.map((x, j) =>
-                    j === i ? { ...x, value: e.target.value } : x,
-                  ),
-                )
-              }
-              data-poll-answer-input={i}
-            />
-            <Button
-              type="button"
-              color="tertiary"
-              variant="outline"
-              disabled={locked || i === 0}
-              onClick={() => setAnswers(moveAnswer(answers, i, -1))}
-              aria-label="↑"
-              data-poll-up={i}
+      <fieldset className="mb-24">
+        <legend className="form-label">{t("poll.answers")}</legend>
+        <ol className="list-unstyled d-flex flex-column gap-8 mb-12">
+          {answers.map((a, i) => (
+            <li
+              key={i}
+              className="d-flex gap-8 align-items-center"
+              data-poll-answer={i}
             >
-              ↑
-            </Button>
-            <Button
-              type="button"
-              color="tertiary"
-              variant="outline"
-              disabled={locked || i === answers.length - 1}
-              onClick={() => setAnswers(moveAnswer(answers, i, 1))}
-              aria-label="↓"
-              data-poll-down={i}
-            >
-              ↓
-            </Button>
-            <Button
-              type="button"
-              color="tertiary"
-              variant="outline"
-              disabled={locked || answers.length <= 2}
-              onClick={() => setAnswers(removeAnswer(answers, i))}
-              aria-label="×"
-              data-poll-remove={i}
-            >
-              ×
-            </Button>
-          </div>
-        ))}
+              <span className="poll-answer-index" aria-hidden="true">
+                {i + 1}
+              </span>
+              <input
+                className="form-control"
+                value={a.value ?? ""}
+                maxLength={MAX_ANSWER}
+                disabled={locked}
+                placeholder={t("poll.answer.placeholder", {
+                  n: i + 1,
+                  defaultValue: "Réponse [[n]]",
+                })}
+                aria-label={t("poll.answer.placeholder", {
+                  n: i + 1,
+                  defaultValue: "Réponse [[n]]",
+                })}
+                onChange={(e) =>
+                  setAnswers(
+                    answers.map((x, j) =>
+                      j === i ? { ...x, value: e.target.value } : x,
+                    ),
+                  )
+                }
+                data-poll-answer-input={i}
+              />
+              <IconButton
+                type="button"
+                color="tertiary"
+                variant="ghost"
+                icon={<IconArrowUp />}
+                disabled={locked || i === 0}
+                onClick={() => setAnswers(moveAnswer(answers, i, -1))}
+                aria-label={t("poll.answer.up", {
+                  n: i + 1,
+                  defaultValue: "Monter la réponse [[n]]",
+                })}
+                data-poll-up={i}
+              />
+              <IconButton
+                type="button"
+                color="tertiary"
+                variant="ghost"
+                icon={<IconArrowDown />}
+                disabled={locked || i === answers.length - 1}
+                onClick={() => setAnswers(moveAnswer(answers, i, 1))}
+                aria-label={t("poll.answer.down", {
+                  n: i + 1,
+                  defaultValue: "Descendre la réponse [[n]]",
+                })}
+                data-poll-down={i}
+              />
+              <IconButton
+                type="button"
+                color="tertiary"
+                variant="ghost"
+                icon={<IconDelete />}
+                disabled={locked || answers.length <= 2}
+                onClick={() => setAnswers(removeAnswer(answers, i))}
+                aria-label={t("poll.answer.remove", {
+                  n: i + 1,
+                  defaultValue: "Supprimer la réponse [[n]]",
+                })}
+                data-poll-remove={i}
+              />
+            </li>
+          ))}
+        </ol>
         {!locked && (
           <Button
             type="button"
             color="primary"
-            variant="outline"
+            variant="ghost"
+            leftIcon={<IconPlus />}
             onClick={() => setAnswers([...answers, { value: "" }])}
             data-poll-add
           >
-            {t("add", { defaultValue: "Ajouter" })}
+            {t("poll.answer.add", { defaultValue: "Ajouter une réponse" })}
           </Button>
         )}
       </fieldset>
 
       {error && (
-        <p className="text-danger" role="alert" data-poll-form-error>
-          {error}
-        </p>
+        <div className="mb-16" role="alert" data-poll-form-error>
+          <Alert type="danger">{error}</Alert>
+        </div>
       )}
-      <div className="d-flex gap-8">
+      <div className="poll-edit-footer">
+        <small className="text-gray-700 me-auto" data-poll-problem>
+          {problem === "question" &&
+            t("poll.draft.question", {
+              defaultValue: "Saisissez la question pour continuer.",
+            })}
+          {problem === "answers" &&
+            t("poll.draft.answers", {
+              defaultValue: "Saisissez au moins deux réponses pour continuer.",
+            })}
+        </small>
         <Button
           type="button"
           color="tertiary"
           variant="ghost"
-          onClick={() => navigate("/")}
+          onClick={cancel}
           data-poll-cancel
         >
           {t("cancel")}
@@ -245,9 +316,12 @@ export const PollEdit = () => {
           type="submit"
           color="primary"
           disabled={!!problem || busy}
+          isLoading={busy}
           data-poll-save
         >
-          {t("save", { defaultValue: "Enregistrer" })}
+          {existing
+            ? t("poll.save", { defaultValue: "Enregistrer" })
+            : t("poll.create.submit", { defaultValue: "Créer le sondage" })}
         </Button>
       </div>
     </form>

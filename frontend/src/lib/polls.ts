@@ -164,3 +164,26 @@ export const withRights = (
   groupIds: string[],
 ): Poll[] =>
   polls.map((p) => ({ ...p, myRights: rightsOf(p, userId, groupIds) }));
+
+/** Jours calendaires restants avant la clôture (0 = clôture aujourd'hui), ou `null` si le sondage est terminé. */
+export const daysLeft = (p: Poll, now: Date = new Date()): number | null => {
+  if (hasExpired(p, now)) return null;
+  const end = endDate(p);
+  const a = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const b = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+  return Math.max(0, Math.round((b - a) / 86_400_000));
+};
+
+/** Index de la réponse en tête (la première en cas d'égalité), ou `null` sans aucun vote. */
+export const leaderIndex = (p: Poll): number | null => {
+  let best: number | null = null;
+  let max = 0;
+  (p.answers ?? []).forEach((a, i) => {
+    const n = a.votes?.length ?? 0;
+    if (n > max) {
+      max = n;
+      best = i;
+    }
+  });
+  return best;
+};

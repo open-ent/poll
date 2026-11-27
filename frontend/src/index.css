@@ -1,0 +1,202 @@
+/* Mise en page du module Sondage — uniquement ce que les utilitaires du socle n'expriment pas.
+   Couleurs et rayons viennent des jetons `--openent-*` du thème chargé au runtime. */
+
+.poll-search {
+  max-width: 48rem;
+}
+
+/* Grille de cartes : autant de colonnes que la largeur le permet. */
+.poll-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(28rem, 1fr));
+  gap: 1.6rem;
+}
+
+/* `.card` redoublé : le thème pose `[data-product] .card { border-color: transparent }`. */
+.card.poll-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.6rem;
+  border: 1px solid var(--openent-gray-400);
+  transition: border-color 0.15s ease;
+}
+.card.poll-card:hover,
+.card.poll-card:focus-within,
+.card.poll-card--selected {
+  border-color: var(--openent-primary);
+}
+
+.poll-card-question {
+  font-weight: 700;
+  color: var(--openent-gray-900);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.poll-card-question:hover {
+  color: var(--openent-primary);
+}
+
+/* La case à cocher passe au-dessus du lien étiré de la carte. */
+.poll-card-select {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+}
+
+.poll-thumb {
+  flex: 0 0 auto;
+  object-fit: cover;
+  border-radius: var(--openent-border-radius);
+}
+
+/* Réponse en tête sur la carte : libellé, pourcentage, filet de progression. */
+.poll-lead {
+  margin-top: 1.2rem;
+}
+.poll-lead-track {
+  height: 0.4rem;
+  margin-top: 0.4rem;
+  border-radius: 0.2rem;
+  background: var(--openent-gray-300);
+  overflow: hidden;
+}
+.poll-lead-fill {
+  height: 100%;
+  background: var(--openent-primary);
+}
+
+.poll-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--openent-gray-700);
+  text-decoration: none;
+}
+.poll-back:hover {
+  color: var(--openent-primary);
+}
+
+.poll-view,
+.poll-edit {
+  max-width: 80rem;
+}
+
+.poll-view-question {
+  font-size: 2.8rem;
+  line-height: 1.25;
+  margin-bottom: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+/* Bulletin et résultats partagent la même ligne : voter, puis voir la ligne se remplir à sa part. */
+.poll-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin: 0;
+}
+.poll-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  min-height: 5.6rem;
+  padding: 1.2rem 1.6rem;
+  border: 1px solid var(--openent-gray-400);
+  border-radius: var(--openent-border-radius);
+  background: var(--openent-white);
+  overflow: hidden;
+}
+.poll-option-label {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.poll-choice {
+  cursor: pointer;
+}
+.poll-choice:hover {
+  border-color: var(--openent-gray-600);
+}
+.poll-choice--checked,
+.poll-choice--checked:hover {
+  border-color: var(--openent-primary);
+  box-shadow: inset 0 0 0 1px var(--openent-primary);
+}
+
+.poll-result-fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  background: var(--openent-gray-400);
+  transition: width 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.poll-result--lead {
+  border-color: var(--openent-primary);
+}
+.poll-result--lead .poll-result-fill {
+  background: var(--openent-primary-200);
+}
+.poll-result-figures {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex: 0 0 auto;
+  line-height: 1.2;
+}
+.poll-result-pct {
+  font-size: 2rem;
+  font-weight: 700;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.poll-result--lead .poll-result-pct {
+  color: var(--openent-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .poll-result-fill,
+  .card.poll-card {
+    transition: none;
+  }
+}
+
+/* Éditeur : vignette à gauche, question et date à droite ; empilés sur mobile. */
+.poll-edit-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2.4rem;
+}
+@media (max-width: 575.98px) {
+  .poll-edit-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.poll-date {
+  max-width: 22rem;
+}
+.poll-answer-index {
+  flex: 0 0 2.4rem;
+  text-align: end;
+  color: var(--openent-gray-700);
+  font-variant-numeric: tabular-nums;
+}
+.poll-link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--openent-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.poll-edit-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8rem;
+  padding-top: 1.6rem;
+  border-top: 1px solid var(--openent-gray-300);
+}

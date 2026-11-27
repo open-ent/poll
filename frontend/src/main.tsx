@@ -1,42 +1,77 @@
-import { AppHeader, Layout } from "@open-ent/react";
-import { EdificeThemeProvider } from "@open-ent/react";
+import {
+  AppHeader,
+  Breadcrumb,
+  Button,
+  EdificeThemeProvider,
+  Layout,
+  useEdificeClient,
+} from "@open-ent/react";
+import { IconPlus } from "@open-ent/react/icons";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { I18nextProvider, useTranslation } from "react-i18next";
-import { HashRouter, Route, Routes } from "react-router-dom";
+import {
+  HashRouter,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import i18n from "./i18n";
+import "./index.css";
 import { PollEdit } from "./pages/PollEdit";
 import { PollList } from "./pages/PollList";
 import { PollView } from "./pages/PollView";
 import { Providers } from "./providers";
 
-// Le thème de la plateforme rend les `.btn-link` quasi invisibles (même couleur que le fond) : ils reprennent la couleur du texte, soulignés.
-const style = document.createElement("style");
-style.textContent =
-  ".btn-link{color:inherit !important;text-decoration:underline}";
-document.head.appendChild(style);
-
-const App = () => {
+/** En-tête : fil d'Ariane du socle (il porte le seul `<h1>` de la page) et, sur l'accueil, le bouton de création. */
+const Header = () => {
   const { t } = useTranslation("poll");
+  const { currentApp } = useEdificeClient();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
   return (
-    <Layout>
-      <AppHeader>
-        <h1 className="h2" data-poll-title>
-          {t("poll.title")}
-        </h1>
-      </AppHeader>
-      <HashRouter>
-        <Routes>
-          <Route path="/" element={<PollList />} />
-          <Route path="/view/:id" element={<PollView />} />
-          <Route path="/new" element={<PollEdit />} />
-          <Route path="/edit/:id" element={<PollEdit />} />
-          <Route path="*" element={<PollList />} />
-        </Routes>
-      </HashRouter>
-    </Layout>
+    <AppHeader
+      render={() =>
+        pathname === "/" ? (
+          <Button
+            type="button"
+            color="primary"
+            variant="filled"
+            leftIcon={<IconPlus />}
+            onClick={() => navigate("/new")}
+            data-poll-new
+          >
+            {t("poll.new")}
+          </Button>
+        ) : null
+      }
+    >
+      <div data-poll-title>
+        {currentApp ? (
+          <Breadcrumb app={currentApp} />
+        ) : (
+          <h1 className="h3 mb-0">{t("poll.title")}</h1>
+        )}
+      </div>
+    </AppHeader>
   );
 };
+
+const App = () => (
+  <HashRouter>
+    <Layout>
+      <Header />
+      <Routes>
+        <Route path="/" element={<PollList />} />
+        <Route path="/view/:id" element={<PollView />} />
+        <Route path="/new" element={<PollEdit />} />
+        <Route path="/edit/:id" element={<PollEdit />} />
+        <Route path="*" element={<PollList />} />
+      </Routes>
+    </Layout>
+  </HashRouter>
+);
 
 const root = document.getElementById("root");
 if (root) {

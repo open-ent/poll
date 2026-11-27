@@ -1,4 +1,5 @@
-import { Button, Modal } from "@open-ent/react";
+import { Button, Modal, SearchBar } from "@open-ent/react";
+import { IconUsers } from "@open-ent/react/icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -59,13 +60,18 @@ export const ShareModal = ({
     return (
       <tr key={`${kind}-${v.id}`} data-share-row={`${kind}:${v.id}`}>
         <td>
-          {kind === "group" ? "👥 " : ""}
-          {v.username ?? v.name}
+          <span className="d-inline-flex align-items-center gap-8">
+            {kind === "group" && (
+              <IconUsers width={16} height={16} aria-hidden="true" />
+            )}
+            {v.username ?? v.name}
+          </span>
         </td>
         {LEVELS.map((l) => (
           <td key={l} className="text-center">
             <input
               type="checkbox"
+              className="form-check-input"
               checked={
                 level !== null && LEVELS.indexOf(level) >= LEVELS.indexOf(l)
               }
@@ -96,12 +102,16 @@ export const ShareModal = ({
   return (
     <Modal id="poll-share" isOpen={!!poll} onModalClose={onClose} scrollable>
       <Modal.Header onModalClose={onClose}>
-        {t("poll.share")} — {poll?.question}
+        {t("poll.share.title", {
+          question: poll?.question ?? "",
+          defaultValue: "Partager « [[question]] »",
+        })}
       </Modal.Header>
       <Modal.Body>
-        <input
-          className="form-control mb-16"
-          type="search"
+        <SearchBar
+          isVariant
+          clearable
+          className="mb-16"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t("poll.share.search", {
@@ -112,7 +122,7 @@ export const ShareModal = ({
           })}
           data-share-search
         />
-        <table className="table" data-share-table>
+        <table className="table align-middle" data-share-table>
           <thead>
             <tr>
               <th />
